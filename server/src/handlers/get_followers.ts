@@ -1,23 +1,32 @@
+import { db } from '../db';
+import { usersTable, followsTable } from '../db/schema';
 import { type GetUserByIdInput, type PublicUser } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const getFollowers = async (input: GetUserByIdInput): Promise<PublicUser[]> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to get all followers of a user:
-    // 1. Query the follows table for records where following_id matches the user ID
-    // 2. Join with users table to get follower user data
-    // 3. Return the list of follower users (without password hashes)
-    return Promise.resolve([
-        {
-            id: 2,
-            username: "follower1",
-            email: "follower1@example.com",
-            profile_picture_url: null,
-            bio: "I'm a follower",
-            followers_count: 3,
-            following_count: 5,
-            posts_count: 2,
-            created_at: new Date(),
-            updated_at: new Date()
-        }
-    ] as PublicUser[]);
+  try {
+    // Query the follows table for records where following_id matches the user ID
+    // Join with users table to get follower user data
+    const results = await db.select({
+      id: usersTable.id,
+      username: usersTable.username,
+      email: usersTable.email,
+      profile_picture_url: usersTable.profile_picture_url,
+      bio: usersTable.bio,
+      followers_count: usersTable.followers_count,
+      following_count: usersTable.following_count,
+      posts_count: usersTable.posts_count,
+      created_at: usersTable.created_at,
+      updated_at: usersTable.updated_at
+    })
+      .from(followsTable)
+      .innerJoin(usersTable, eq(followsTable.follower_id, usersTable.id))
+      .where(eq(followsTable.following_id, input.id))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Get followers failed:', error);
+    throw error;
+  }
 };

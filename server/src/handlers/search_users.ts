@@ -1,23 +1,34 @@
+import { db } from '../db';
+import { usersTable } from '../db/schema';
 import { type SearchUsersInput, type PublicUser } from '../schema';
+import { ilike } from 'drizzle-orm';
 
 export const searchUsers = async (input: SearchUsersInput): Promise<PublicUser[]> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to search for users by username:
-    // 1. Search for users whose username contains the query string (case-insensitive)
-    // 2. Limit the results according to the input limit parameter
-    // 3. Return matching users without password hashes
-    return Promise.resolve([
-        {
-            id: 1,
-            username: "testuser",
-            email: "test@example.com",
-            profile_picture_url: null,
-            bio: "Test bio",
-            followers_count: 5,
-            following_count: 10,
-            posts_count: 3,
-            created_at: new Date(),
-            updated_at: new Date()
-        }
-    ] as PublicUser[]);
+  try {
+    // Build the base query with where clause
+    const baseQuery = db.select({
+      id: usersTable.id,
+      username: usersTable.username,
+      email: usersTable.email,
+      profile_picture_url: usersTable.profile_picture_url,
+      bio: usersTable.bio,
+      followers_count: usersTable.followers_count,
+      following_count: usersTable.following_count,
+      posts_count: usersTable.posts_count,
+      created_at: usersTable.created_at,
+      updated_at: usersTable.updated_at
+    })
+    .from(usersTable)
+    .where(ilike(usersTable.username, `%${input.query}%`));
+
+    // Apply limit if provided, otherwise execute without limit
+    const results = input.limit !== undefined
+      ? await baseQuery.limit(input.limit).execute()
+      : await baseQuery.execute();
+
+    return results;
+  } catch (error) {
+    console.error('User search failed:', error);
+    throw error;
+  }
 };

@@ -1,22 +1,27 @@
+import { db } from '../db';
+import { postsTable } from '../db/schema';
 import { type GetPostsByUserIdInput, type Post } from '../schema';
+import { eq, desc } from 'drizzle-orm';
 
 export const getPostsByUserId = async (input: GetPostsByUserIdInput): Promise<Post[]> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch posts by a specific user:
-    // 1. Query posts where user_id matches the input
-    // 2. Order by created_at descending (newest first)
-    // 3. Apply limit and offset for pagination
-    // 4. Return the list of posts
-    return Promise.resolve([
-        {
-            id: 1,
-            user_id: input.user_id,
-            image_url: "https://example.com/image1.jpg",
-            caption: "Sample post caption",
-            likes_count: 5,
-            comments_count: 2,
-            created_at: new Date(),
-            updated_at: new Date()
-        }
-    ] as Post[]);
+  try {
+    // Apply pagination - use defaults if not provided
+    const limit = input.limit ?? 20;
+    const offset = input.offset ?? 0;
+
+    // Build the complete query in one chain
+    const results = await db.select()
+      .from(postsTable)
+      .where(eq(postsTable.user_id, input.user_id))
+      .orderBy(desc(postsTable.created_at))
+      .limit(limit)
+      .offset(offset)
+      .execute();
+
+    // Return the posts (no numeric conversion needed for this table)
+    return results;
+  } catch (error) {
+    console.error('Failed to get posts by user ID:', error);
+    throw error;
+  }
 };

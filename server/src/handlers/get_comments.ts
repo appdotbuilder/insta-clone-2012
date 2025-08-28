@@ -1,28 +1,26 @@
+import { db } from '../db';
+import { commentsTable } from '../db/schema';
 import { type GetCommentsInput, type Comment } from '../schema';
+import { eq, asc } from 'drizzle-orm';
 
 export const getComments = async (input: GetCommentsInput): Promise<Comment[]> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch comments for a specific post:
-    // 1. Query comments where post_id matches the input
-    // 2. Order by created_at ascending (oldest first)
-    // 3. Apply limit and offset for pagination
-    // 4. Return the list of comments
-    return Promise.resolve([
-        {
-            id: 1,
-            user_id: 1,
-            post_id: input.post_id,
-            content: "Great photo!",
-            created_at: new Date(),
-            updated_at: new Date()
-        },
-        {
-            id: 2,
-            user_id: 2,
-            post_id: input.post_id,
-            content: "Love this!",
-            created_at: new Date(),
-            updated_at: new Date()
-        }
-    ] as Comment[]);
+  try {
+    // Apply pagination - use defaults if not provided
+    const limit = input.limit || 20;
+    const offset = input.offset || 0;
+    
+    // Build and execute query in one step
+    const results = await db.select()
+      .from(commentsTable)
+      .where(eq(commentsTable.post_id, input.post_id))
+      .orderBy(asc(commentsTable.created_at))
+      .limit(limit)
+      .offset(offset)
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Get comments failed:', error);
+    throw error;
+  }
 };

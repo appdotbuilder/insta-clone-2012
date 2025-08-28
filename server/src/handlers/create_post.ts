@@ -1,20 +1,43 @@
+import { db } from '../db';
+import { postsTable, usersTable } from '../db/schema';
 import { type CreatePostInput, type Post } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const createPost = async (input: CreatePostInput): Promise<Post> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to create a new post:
+  try {
     // 1. Validate that the user exists
+    const user = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.id, input.user_id))
+      .execute();
+
+    if (user.length === 0) {
+      throw new Error(`User with id ${input.user_id} not found`);
+    }
+
     // 2. Create a new post record in the database
-    // 3. Increment the user's posts_count
-    // 4. Return the created post data
-    return Promise.resolve({
-        id: 1, // Placeholder ID
+    const result = await db.insert(postsTable)
+      .values({
         user_id: input.user_id,
         image_url: input.image_url,
-        caption: input.caption || null,
-        likes_count: 0,
-        comments_count: 0,
-        created_at: new Date(),
+        caption: input.caption || null
+      })
+      .returning()
+      .execute();
+
+    // 3. Increment the user's posts_count
+    await db.update(usersTable)
+      .set({ 
+        posts_count: user[0].posts_count + 1,
         updated_at: new Date()
-    } as Post);
+      })
+      .where(eq(usersTable.id, input.user_id))
+      .execute();
+
+    // 4. Return the created post data
+    return result[0];
+  } catch (error) {
+    console.error('Post creation failed:', error);
+    throw error;
+  }
 };
